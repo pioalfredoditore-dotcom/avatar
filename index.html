@@ -6,13 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #1e1e1e;
-    font-family: Arial, sans-serif;
-  }
-
+  body { margin: 0; overflow: hidden; background: #1e1e1e; }
   #ui {
     position: absolute;
     bottom: 20px;
@@ -22,19 +16,6 @@
     border-radius: 8px;
     color: white;
     z-index: 10;
-  }
-
-  input {
-    padding: 6px;
-    border-radius: 4px;
-    border: none;
-  }
-
-  button {
-    padding: 6px 10px;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
   }
 </style>
 </head>
@@ -75,53 +56,35 @@ function init() {
   renderer.outputEncoding = THREE.sRGBEncoding;
   document.body.appendChild(renderer.domElement);
 
-  // LUCI
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-  scene.add(hemiLight);
-
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(2, 5, 3);
-  scene.add(dirLight);
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+  scene.add(light);
 
   const loader = new THREE.GLTFLoader();
 
-  loader.load(
-    'avatar.glb',
-    function (gltf) {
+  loader.load('avatar.glb', function(gltf) {
 
-      avatar = gltf.scene;
+    avatar = gltf.scene;
 
-      // ===== BOUNDING BOX =====
-      const box = new THREE.Box3().setFromObject(avatar);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
+    const box = new THREE.Box3().setFromObject(avatar);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
 
-      // ===== CENTRATURA =====
-      avatar.position.x -= center.x;
-      avatar.position.y -= box.min.y;
-      avatar.position.z -= center.z;
+    avatar.position.sub(center);
+    avatar.position.y -= box.min.y;
 
-      // ===== SCALA =====
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 1.8 / maxDim;
-      avatar.scale.setScalar(scale);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 1.8 / maxDim;
+    avatar.scale.setScalar(scale);
 
-      baseY = avatar.position.y;
+    baseY = avatar.position.y;
 
-      scene.add(avatar);
+    scene.add(avatar);
 
-      // ===== CAMERA SU BUSTO =====
-      const height = size.y * scale;
+    const height = size.y * scale;
+    camera.position.set(0, height * 0.75, height * 1.8);
+    camera.lookAt(0, height * 0.7, 0);
 
-      camera.position.set(0, height * 0.75, height * 1.8);
-      camera.lookAt(0, height * 0.7, 0);
-
-    },
-    undefined,
-    function (error) {
-      console.error("Errore caricamento GLB:", error);
-    }
-  );
+  });
 
   window.addEventListener('resize', onWindowResize);
 }
@@ -136,27 +99,25 @@ function animate() {
 
   requestAnimationFrame(animate);
 
-  const time = clock.getElapsedTime();
+  const t = clock.getElapsedTime();
 
-  if (avatar && isSpeaking) {
+  if (avatar) {
 
-    // oscillazione testa/busto
-    avatar.rotation.y = Math.sin(time * 2) * 0.05;
+    // IDLE sempre attivo (devi vedere movimento anche senza parlare)
+    avatar.rotation.y = Math.sin(t * 0.5) * 0.02;
 
-    // micro movimento verticale (respiro simulato)
-    avatar.position.y = baseY + Math.sin(time * 4) * 0.01;
+    avatar.position.y = baseY + Math.sin(t * 1.5) * 0.01;
 
-  } else if (avatar) {
-
-    // ritorno graduale alla posizione neutra
-    avatar.rotation.y *= 0.9;
-    avatar.position.y = baseY;
+    // Se parla aumenta intensità
+    if (isSpeaking) {
+      avatar.rotation.y = Math.sin(t * 2) * 0.08;
+      avatar.position.y = baseY + Math.sin(t * 4) * 0.03;
+    }
   }
 
   renderer.render(scene, camera);
 }
 
-// ===== TEXT TO SPEECH =====
 function speak() {
 
   const text = document.getElementById("msg").value;
@@ -166,10 +127,12 @@ function speak() {
   utterance.lang = "it-IT";
 
   utterance.onstart = function() {
+    console.log("START speaking");
     isSpeaking = true;
   };
 
   utterance.onend = function() {
+    console.log("END speaking");
     isSpeaking = false;
   };
 
@@ -177,6 +140,5 @@ function speak() {
 }
 
 </script>
-
 </body>
 </html>
