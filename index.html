@@ -118,21 +118,29 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-function speak() {
+async function speak() {
 
   const text = document.getElementById("msg").value;
   if (!text) return;
 
-  const utterance = new SpeechSynthesisUtterance(text);
+  isSpeaking = true;
+
+  const response = await fetch("https://script.google.com/macros/s/AKfycbwykFvFAzAXXNKI7y90T3Zy3KVYWwihsgyAzp8q2Ztr7_bMafEp-h6EOZmlCwBFd1vg/exec", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: text
+    })
+  });
+
+  const reply = await response.text();
+
+  const utterance = new SpeechSynthesisUtterance(reply);
   utterance.lang = "it-IT";
 
-  utterance.onstart = function() {
-    console.log("START speaking");
-    isSpeaking = true;
-  };
-
   utterance.onend = function() {
-    console.log("END speaking");
     isSpeaking = false;
   };
 
