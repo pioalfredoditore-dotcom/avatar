@@ -67,12 +67,14 @@ function init() {
     100
   );
 
+  camera.position.set(0, 1, 3);
+
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
   document.body.appendChild(renderer.domElement);
 
-  // LUCI migliorate
+  // LUCI
   const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
   scene.add(hemiLight);
 
@@ -88,30 +90,28 @@ function init() {
 
       avatar = gltf.scene;
 
-      // ===== CENTRATURA AUTOMATICA =====
+      // ===== CALCOLO BOUNDING BOX =====
       const box = new THREE.Box3().setFromObject(avatar);
-      const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
 
-      // Porta centro in (0,0,0)
+      // ===== CENTRATURA =====
       avatar.position.x -= center.x;
-      avatar.position.y -= center.y;
+      avatar.position.y -= box.min.y;
       avatar.position.z -= center.z;
 
-      // Allinea piedi a terra
-      avatar.position.y -= box.min.y;
-
-      // Ridimensionamento proporzionale
+      // ===== SCALA PROPORZIONALE =====
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 1.6 / maxDim;
+      const scale = 1.8 / maxDim;
       avatar.scale.setScalar(scale);
 
       scene.add(avatar);
 
-      // ===== POSIZIONE CAMERA AUTOMATICA =====
-      const distance = maxDim * 1.8;
-      camera.position.set(0, maxDim * 0.9, distance);
-      camera.lookAt(0, maxDim * 0.6, 0);
+      // ===== CAMERA ADATTIVA SU BUSTO =====
+      const height = size.y * scale;
+
+      camera.position.set(0, height * 0.75, height * 1.8);
+      camera.lookAt(0, height * 0.7, 0);
 
     },
     undefined,
