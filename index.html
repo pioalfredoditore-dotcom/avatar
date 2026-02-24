@@ -51,6 +51,9 @@
 <script>
 
 let scene, camera, renderer, avatar;
+let isSpeaking = false;
+let clock = new THREE.Clock();
+let baseY = 0;
 
 init();
 animate();
@@ -66,8 +69,6 @@ function init() {
     0.1,
     100
   );
-
-  camera.position.set(0, 1, 3);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -90,7 +91,7 @@ function init() {
 
       avatar = gltf.scene;
 
-      // ===== CALCOLO BOUNDING BOX =====
+      // ===== BOUNDING BOX =====
       const box = new THREE.Box3().setFromObject(avatar);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
@@ -100,14 +101,16 @@ function init() {
       avatar.position.y -= box.min.y;
       avatar.position.z -= center.z;
 
-      // ===== SCALA PROPORZIONALE =====
+      // ===== SCALA =====
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = 1.8 / maxDim;
       avatar.scale.setScalar(scale);
 
+      baseY = avatar.position.y;
+
       scene.add(avatar);
 
-      // ===== CAMERA ADATTIVA SU BUSTO =====
+      // ===== CAMERA SU BUSTO =====
       const height = size.y * scale;
 
       camera.position.set(0, height * 0.75, height * 1.8);
@@ -130,15 +133,46 @@ function onWindowResize() {
 }
 
 function animate() {
+
   requestAnimationFrame(animate);
+
+  const time = clock.getElapsedTime();
+
+  if (avatar && isSpeaking) {
+
+    // oscillazione testa/busto
+    avatar.rotation.y = Math.sin(time * 2) * 0.05;
+
+    // micro movimento verticale (respiro simulato)
+    avatar.position.y = baseY + Math.sin(time * 4) * 0.01;
+
+  } else if (avatar) {
+
+    // ritorno graduale alla posizione neutra
+    avatar.rotation.y *= 0.9;
+    avatar.position.y = baseY;
+  }
+
   renderer.render(scene, camera);
 }
 
-// Text-to-Speech
+// ===== TEXT TO SPEECH =====
 function speak() {
+
   const text = document.getElementById("msg").value;
+  if (!text) return;
+
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "it-IT";
+
+  utterance.onstart = function() {
+    isSpeaking = true;
+  };
+
+  utterance.onend = function() {
+    isSpeaking = false;
+  };
+
   speechSynthesis.speak(utterance);
 }
 
