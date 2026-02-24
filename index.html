@@ -9,7 +9,7 @@
   body {
     margin: 0;
     overflow: hidden;
-    background: #222;
+    background: #1e1e1e;
     font-family: Arial, sans-serif;
   }
 
@@ -21,6 +21,7 @@
     padding: 10px;
     border-radius: 8px;
     color: white;
+    z-index: 10;
   }
 
   input {
@@ -44,7 +45,6 @@
   <button onclick="speak()">Parla</button>
 </div>
 
-<!-- THREE.js versione compatibile -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.124.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.124.0/examples/js/loaders/GLTFLoader.js"></script>
 
@@ -58,7 +58,7 @@ animate();
 function init() {
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x222222);
+  scene.background = new THREE.Color(0x1e1e1e);
 
   camera = new THREE.PerspectiveCamera(
     45,
@@ -67,22 +67,52 @@ function init() {
     100
   );
 
-  camera.position.set(0, 1.6, 3);
-
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
   document.body.appendChild(renderer.domElement);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-  scene.add(light);
+  // LUCI migliorate
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+  scene.add(hemiLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(2, 5, 3);
+  scene.add(dirLight);
 
   const loader = new THREE.GLTFLoader();
 
   loader.load(
     'avatar.glb',
     function (gltf) {
+
       avatar = gltf.scene;
+
+      // ===== CENTRATURA AUTOMATICA =====
+      const box = new THREE.Box3().setFromObject(avatar);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+
+      // Porta centro in (0,0,0)
+      avatar.position.x -= center.x;
+      avatar.position.y -= center.y;
+      avatar.position.z -= center.z;
+
+      // Allinea piedi a terra
+      avatar.position.y -= box.min.y;
+
+      // Ridimensionamento proporzionale
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 1.6 / maxDim;
+      avatar.scale.setScalar(scale);
+
       scene.add(avatar);
+
+      // ===== POSIZIONE CAMERA AUTOMATICA =====
+      const distance = maxDim * 1.8;
+      camera.position.set(0, maxDim * 0.9, distance);
+      camera.lookAt(0, maxDim * 0.6, 0);
+
     },
     undefined,
     function (error) {
@@ -104,7 +134,7 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// Text-to-Speech nativo
+// Text-to-Speech
 function speak() {
   const text = document.getElementById("msg").value;
   const utterance = new SpeechSynthesisUtterance(text);
